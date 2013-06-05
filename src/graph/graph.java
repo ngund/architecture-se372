@@ -3,10 +3,7 @@ package graph;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created with IntelliJ IDEA.
@@ -17,73 +14,12 @@ import java.util.Map;
 public class graph {
 
     point[] vertex;
-
     private Map<Integer, String> dict;
 
     {
         dict = new HashMap<Integer, String>();
         dict.put(1, "public");
         dict.put(2, "private");
-    }
-
-    private class point {
-
-        private int accessModifier;
-        private int label;
-        private List<Integer> using = new ArrayList<Integer>();
-        private List<Integer> usedBy = new ArrayList<Integer>();
-
-        int getAccessModifier() {
-            return accessModifier;
-        }
-
-        String getStringAccessModifier() {
-            return dict.get(this.accessModifier);
-        }
-
-        void setAccessModifier(int accessModifier) {
-            this.accessModifier = accessModifier;
-        }
-
-        int getLabel() {
-            return label;
-        }
-
-        void setLabel(int label) {
-            this.label = label;
-        }
-
-        List<Integer> getUsing() {
-            return using;
-        }
-
-        void setUsing(List<Integer> using) {
-            this.using = using;
-        }
-
-        void addUsing(int newPoint) {
-            this.using.add(newPoint);
-        }
-
-        int getSizeOfUsing() {
-            return this.using.size();
-        }
-
-        List<Integer> getUsedBy() {
-            return usedBy;
-        }
-
-        void setUsedBy(List<Integer> usedBy) {
-            this.usedBy = usedBy;
-        }
-
-        void addUsedBy(int newPoint) {
-            this.usedBy.add(newPoint);
-        }
-
-        int getSizeOfUsedBy() {
-            return this.usedBy.size();
-        }
     }
 
     public graph(int size) throws IllegalArgumentException {
@@ -169,7 +105,7 @@ public class graph {
                 throw new Exception("Неправильное форматирование файла");
             }
         } catch (IOException e) {
-            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+            e.printStackTrace();
         } finally {
             br.close();
         }
@@ -177,7 +113,180 @@ public class graph {
     }
 
     public void findLabels() {
-        //TODO implement this method
+        List<point> vert = new ArrayList<point>();
+
+        Collections.addAll(vert, vertex);
+
+        findL(vert);
+        int i = 1;
+        while (searchNextLabel(i)) i++;
+    }
+
+    private boolean searchNextLabel(int currentLabel) {
+        List<point> graph = new ArrayList<point>();
+        Map<Integer, Integer> mapGraphToVer = new HashMap<Integer, Integer>();
+        Map<Integer, Integer> mapVerToGraph = new HashMap<Integer, Integer>();
+
+        for (int i = 0; i < vertex.length; i++) {
+            if (vertex[i].getLabel() == 0) {
+                graph.add(new point());
+                mapGraphToVer.put(graph.size(), i);
+                mapVerToGraph.put(i, graph.size());
+            }
+        }
+        if (graph.size() == 0) return false;
+        for (int i = 0; i < graph.size(); i ++) {
+            graph.get(i).setAccessModifier(vertex[mapGraphToVer.get(i)].getAccessModifier());
+            List<Integer> usedBy = vertex[mapGraphToVer.get(i)].getUsedBy();
+            for (Integer u : usedBy) {
+                if (mapVerToGraph.containsKey(u)) {
+                    graph.get(i).addUsedBy(mapVerToGraph.get(u));
+                }
+            }
+            List<Integer> using = vertex[mapGraphToVer.get(i)].getUsing();
+            for (Integer u : using) {
+                if (mapVerToGraph.containsKey(u)) {
+                    graph.get(i).addUsing(mapVerToGraph.get(u));
+                }
+            }
+        }
+        findL(graph);
+
+        for (int i = 0; i < graph.size(); i++) {
+            if (graph.get(i).getLabel() != 0) {
+                vertex[mapGraphToVer.get(i)].setLabel(i+1);
+            }
+        }
+        return true;
+    }
+
+    private void findL(List<point> graph) {
+        for (point aVertex : graph) {
+            if (aVertex.getSizeOfUsing() == 0 && aVertex.getAccessModifier() != 2) {
+                aVertex.setLabel(1);
+            }
+        }
+        int[] crossHandled = findCrossHandledModules(graph);
+        for (int aCrossHandled : crossHandled) {
+            graph.get(aCrossHandled).setLabel(1);
+        }
+        List<Integer> loop = findFreeLoop(graph);
+        for (int aLoop : loop) {
+            graph.get(aLoop).setLabel(1);
+        }
+    }
+
+    private int[] findCrossHandledModules(List<point> graph) {
+        List<Integer> res = new ArrayList<Integer>();
+        List<Integer> alreadyChecked = new ArrayList<Integer>();
+        for (int i = 0; i < graph.size(); i++) {
+            if (!alreadyChecked.contains(i)) {
+                List<Integer> tmp = new ArrayList<Integer>();
+                if (check(graph, tmp, i)) {
+                    for (Integer aTmp : tmp)
+                    if (!res.contains(aTmp))
+                        res.add(aTmp);
+                }
+                alreadyChecked.add(i);
+                for (Integer aTmp : tmp)
+                    if (!alreadyChecked.contains(aTmp))
+                        alreadyChecked.add(aTmp);
+            }
+        }
+        int[] resArray = new int[res.size()];
+        for (int i = 0; i < res.size(); i++) {
+            resArray[i] = res.get(i);
+        }
+        return resArray;
+    }
+
+    private boolean check(List<point> graph, List<Integer> alreadyChecked, int v) {
+        boolean res = true;
+        List<Integer> using = graph.get(v).getUsing();
+        if (alreadyChecked.contains(v)) {
+            return true;
+        }
+        alreadyChecked.add(v);
+        for (int j = 0; j < using.size(); j++) {
+            if (graph.get(using.get(j)).getUsing().contains(v)) {
+                res = res && check(graph, alreadyChecked, j);
+            } else {
+                res = false;
+            }
+        }
+        return res;
+    }
+
+    /***
+     * Найди свободный цикл, как в примере CDE, то есть множество вершин, которые используют друг друга и
+     * модули, не имеющие зависимостей никаких, кроме базового слоя.
+     * @param graph граф, в котором надо искать
+     * @return массив индексов таких точек
+     */
+    private List<Integer> findFreeLoop(List<point> graph) {
+        List<Integer> res = new ArrayList<Integer>();
+        //TODO здесь нужно искать свободный цикл, то есть такой, который использует либо себя, либо еще модули с нижнего уровня
+        return res;
+    }
+
+    private class point {
+
+        private int accessModifier;
+        private int label;
+        private List<Integer> using = new ArrayList<Integer>();
+        private List<Integer> usedBy = new ArrayList<Integer>();
+
+        int getAccessModifier() {
+            return accessModifier;
+        }
+
+        void setAccessModifier(int accessModifier) {
+            this.accessModifier = accessModifier;
+        }
+
+        String getStringAccessModifier() {
+            return dict.get(this.accessModifier);
+        }
+
+        int getLabel() {
+            return label;
+        }
+
+        void setLabel(int label) {
+            this.label = label;
+        }
+
+        List<Integer> getUsing() {
+            return using;
+        }
+
+        void setUsing(List<Integer> using) {
+            this.using = using;
+        }
+
+        void addUsing(int newPoint) {
+            this.using.add(newPoint);
+        }
+
+        int getSizeOfUsing() {
+            return this.using.size();
+        }
+
+        List<Integer> getUsedBy() {
+            return usedBy;
+        }
+
+        void setUsedBy(List<Integer> usedBy) {
+            this.usedBy = usedBy;
+        }
+
+        void addUsedBy(int newPoint) {
+            this.usedBy.add(newPoint);
+        }
+
+        int getSizeOfUsedBy() {
+            return this.usedBy.size();
+        }
     }
 
 }
