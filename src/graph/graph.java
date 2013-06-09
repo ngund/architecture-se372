@@ -11,9 +11,9 @@ import java.util.*;
  * Date: 6/3/13
  * Time: 9:10 PM
  */
-public class graph {
+public class Graph {
 
-    point[] vertex;
+    Point[] vertex;
     private Map<Integer, String> dict;
 
     {
@@ -22,14 +22,14 @@ public class graph {
         dict.put(2, "private");
     }
 
-    public graph(int size) throws IllegalArgumentException {
+    public Graph(int size) throws IllegalArgumentException {
         if (size <= 0) throw new IllegalArgumentException("Количество вершин в графе должно быть строго больше 0");
-        vertex = new point[size];
+        vertex = new Point[size];
     }
 
     public void setGraphSize(int newSize) throws IllegalArgumentException {
         if (newSize <= 0) throw new IllegalArgumentException("Количество вершин в графе должно быть строго больше 0");
-        vertex = new point[newSize];
+        vertex = new Point[newSize];
     }
 
     public void setGraphFromMatrix(int[][] adjacencyMatrix) throws IllegalArgumentException {
@@ -113,7 +113,7 @@ public class graph {
     }
 
     public void findLabels() {
-        List<point> vert = new ArrayList<point>();
+        List<Point> vert = new ArrayList<Point>();
 
         Collections.addAll(vert, vertex);
 
@@ -123,13 +123,13 @@ public class graph {
     }
 
     private boolean searchNextLabel(int currentLabel) {
-        List<point> graph = new ArrayList<point>();
+        List<Point> graph = new ArrayList<Point>();
         Map<Integer, Integer> mapGraphToVer = new HashMap<Integer, Integer>();
         Map<Integer, Integer> mapVerToGraph = new HashMap<Integer, Integer>();
 
         for (int i = 0; i < vertex.length; i++) {
             if (vertex[i].getLabel() == 0) {
-                graph.add(new point());
+                graph.add(new Point());
                 mapGraphToVer.put(graph.size(), i);
                 mapVerToGraph.put(i, graph.size());
             }
@@ -160,8 +160,8 @@ public class graph {
         return true;
     }
 
-    private void findL(List<point> graph) {
-        for (point aVertex : graph) {
+    private void findL(List<Point> graph) {
+        for (Point aVertex : graph) {
             if (aVertex.getSizeOfUsing() == 0 && aVertex.getAccessModifier() != 2) {
                 aVertex.setLabel(1);
             }
@@ -176,7 +176,7 @@ public class graph {
         }
     }
 
-    private int[] findCrossHandledModules(List<point> graph) {
+    private int[] findCrossHandledModules(List<Point> graph) {
         List<Integer> res = new ArrayList<Integer>();
         List<Integer> alreadyChecked = new ArrayList<Integer>();
         for (int i = 0; i < graph.size(); i++) {
@@ -200,7 +200,7 @@ public class graph {
         return resArray;
     }
 
-    private boolean check(List<point> graph, List<Integer> alreadyChecked, int v) {
+    private boolean check(List<Point> graph, List<Integer> alreadyChecked, int v) {
         boolean res = true;
         List<Integer> using = graph.get(v).getUsing();
         if (alreadyChecked.contains(v)) {
@@ -223,13 +223,13 @@ public class graph {
      * @param graph граф, в котором надо искать
      * @return массив индексов таких точек
      */
-    private List<Integer> findFreeLoop(List<point> graph) {
+    private List<Integer> findFreeLoop(List<Point> graph) {
         List<Integer> res = new ArrayList<Integer>();
         //TODO здесь нужно искать свободный цикл, то есть такой, который использует либо себя, либо еще модули с нижнего уровня
         return res;
     }
 
-    private class point {
+    private class Point {
 
         private int accessModifier;
         private int label;
